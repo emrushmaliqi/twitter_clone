@@ -1,11 +1,11 @@
 <?php
 include '../utils.php';
-include '../layout/header.php';
 
 if (!isLogged()) {
     header('Location: auth/login.php');
     die();
 }
+include '../layout/header.php';
 
 $isLoggedUser = $_GET['username'] == $_SESSION['logged']['username'];
 
@@ -21,7 +21,7 @@ if (isset($_GET['username'])) {
     if ($stmt->execute([$_GET['username']])) {
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($user) {
-            $tweets = getTweets($user['id'], true, false);
+            $tweets = getTweets($user['id'], true, false, $_GET['page'] ?? 1);
             $sql = "SELECT COUNT(*) FROM follows WHERE follower = ?";
             $followingStmt = $conn->prepare($sql);
             $followingStmt->execute([$user['id']]);
@@ -65,14 +65,14 @@ if (!$isLoggedUser && $user) {
         }
     </style>
 
-    <div class="container">
-        <div class="d-flex justify-content-center w-100">
-            <img src="../uploads/<?= $user['profile_image'] ?>" alt="<?= $user['username'] ?>" height="80" width="80" class="img-fluid">
+    <div class="container pt-5 d-flex flex-column align-items-center">
+        <div class="d-flex justify-content-center align-items-center gap-4 w-75">
+            <img src="../uploads/<?= $user['profile_image'] ?>" alt="<?= $user['username'] ?>" style="width:80px; height:80px; object-fit:cover;" class="img-fluid rounded-circle">
             <div class="w-50">
                 <div>
-                    <h4><?= $user['username'] ?></h4>
+                    <h4 class="mb-0"><?= $user['username'] ?></h4>
                 </div>
-                <div class="row">
+                <div class="row align-items-center">
                     <span class="col"><?= count($tweets) ?> Tweets</span>
                     <span class="col" data-id="<?= $user['id'] ?>" <?= $followers > 0 ? 'onclick="showFollows(this)" role="button" data-follows-type="followers"' : "" ?>><span id="followersAmount"><?= $followers ?></span> Followers</span>
                     <span class="col" data-id="<?= $user['id'] ?>" <?= $following > 0 ? 'onclick="showFollows(this)" role="button" data-follows-type="followings"' : "" ?>><?= $following ?> Following</span>
@@ -88,28 +88,59 @@ if (!$isLoggedUser && $user) {
                 </div>
             </div>
         </div>
-        <?php foreach ($tweets as $tweet) : ?>
-            <?php $isLiked = isTweetLiked($tweet['id']); ?>
-            <div id="tweet-<?= $tweet['id'] ?>">
-                <img src="../uploads/<?= $tweet['profile_image'] ?>" alt="<?php $tweet['username'] ?> picture" style="width: 50px;" class="rounded-circle">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h4> <?= $tweet['username'] ?></h4>
+        <div class="mt-5">
+            <?php foreach ($tweets as $tweet) : ?>
+                <?php $isLiked = isTweetLiked($tweet['id']); ?>
+                <div id="tweet-<?= $tweet['id'] ?>" class="px-auto mt-2 row align-items-center" style="min-width:400px;">
+                    <div class="col-3 d-flex p-1 align-self-start justify-content-end">
+                        <img src="../uploads/<?= $tweet['profile_image'] ?>" alt="<?php $tweet['username'] ?> picture" style="width: 50px; height:50px; object-fit:cover;" class="rounded-circle">
+                    </div>
+                    <div class="d-flex flex-column justify-content-start align-items-start col-6">
+                        <div class="d-flex justify-content-start align-items-center gap-3">
+                            <h5> <?= $tweet['username'] ?></h5>
+                            <small><?= time_elapsed_string($tweet['created_at']); ?></small>
+                        </div>
                         <p><?= $tweet['content'] ?></p>
                     </div>
-                    <div>
-                        <div class="d-flex flex-column justify-content-center align-items-center">
-                            <i role="button" onClick="like(this)" id="<?= $tweet['id'] ?>" data-is-liked="<?= $isLiked ? "true" : "false" ?>" class="text-danger bi bi-heart<?php $isLiked && print_r("-fill"); ?> ">
-                                <small class="text-black d-block ms-1"><?= $tweet['likes'] ?></small>
-                            </i>
+                    <div class="col-2">
+                        <div class="d-flex gap-3">
+                            <div class="d-flex flex-column justify-content-center align-items-center">
+                                <i role="button" onClick="like(this)" id="<?= $tweet['id'] ?>" data-is-liked="<?= $isLiked ? "true" : "false" ?>" class="text-danger d-flex flex-column bi bi-heart<?php $isLiked && print_r("-fill"); ?> ">
+                                    <small class="text-black text-center"><?= $tweet['likes'] ?></small>
+                                </i>
+                            </div>
+                            <?= $isLoggedUser ? '<button type="button" class="btn btn-danger" onclick="deleteTweet(this)" data-id="' . $tweet['id'] . '" ><i class="bi bi-trash"></i></button>' : '' ?>
                         </div>
-                        <small><?= time_elapsed_string($tweet['created_at']); ?></small>
                     </div>
-                    <?= $isLoggedUser ? '<button type="button" class="btn btn-danger" onclick="deleteTweet(this)" data-id="' . $tweet['id'] . '" ><i class="bi bi-trash"></i></button>' : '' ?>
                 </div>
-            </div>
-        <?php endforeach; ?>
+            <?php endforeach; ?>
+        </div>
+        <nav>
+            <ul class="pagination mt-3">
+                <li class="page-item">
+                    <?php if (isset($_GET['page']) && $_GET['page'] > 1) : ?>
+                        <a class="page-link" href="?page=<?= isset($_GET['page']) ? $_GET['page'] - 1 : 1; ?>&username=<?= $_GET['username'] ?>">Previous</a>
+                    <?php else : ?>
+                        <span class="page-link disabled">Previous</span>
+                    <?php endif; ?>
+
+                </li>
+                <?= isset($_GET['page']) && $_GET['page'] > 1 ? "<li class='page-item'><a class='page-link' href='" . "?page=" . $_GET['page'] - 1 . "&username=" . $_GET['username'] . "'>" . $_GET['page'] - 1 . "</a></li>" : ""; ?>
+                <li class="page-item active" aria-current="page">
+                    <span class="page-link"><?= isset($_GET['page']) ? $_GET['page'] : 1; ?></span>
+                </li>
+                <?php if (count($tweets) == 10) : ?>
+                    <li class="page-item" aria-current="page">
+                        <a href="?page=<?= isset($_GET['page']) ? $_GET['page'] + 1 : 2; ?>&username=<?= $_GET['username'] ?>" class="page-link"><?= isset($_GET['page']) ? $_GET['page'] + 1 : 2; ?></a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page=<?= isset($_GET['page']) ? $_GET['page'] + 1 : 2; ?>&username=<?= $_GET['username'] ?>">Next</a>
+                    </li>
+                <?php endif; ?>
+            </ul>
+        </nav>
     </div>
+
     <?php if (isset($_GET['success'])) : ?>
         <div style="bottom: 0; right: 10px;" class="position-fixed alert alert-success ?>" role="alert" id="anyAlert"><?= $_GET['success'] ?></div>
     <?php elseif (isset($_GET['error'])) : ?>

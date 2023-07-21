@@ -36,8 +36,8 @@ function logIn()
         throw new Exception('Password is not valid');
 
     if (isset($_POST['remember'])) {
-        setcookie('username', $_POST['username'], time() + 3600 * 24 * 7);
-        setcookie('password', $_POST['password'], time() + 3600 * 24 * 7);
+        setcookie('username', $_POST['username_email'], time() + 3600 * 24 * 7, '/');
+        setcookie('password', $_POST['password'], time() + 3600 * 24 * 7, '/');
     }
 
     header('Location: ../index.php');

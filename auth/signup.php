@@ -4,55 +4,44 @@ include '../utils.php';
 if (isLogged())
     header('Location: ../index.php');
 
-$objDb = new Database;
-$conn = $objDb->connect();
-
 $err = '';
 
-function signUp($username, $email, $password)
+
+
+function sign_up()
 {
-    global $conn, $err;
+    global $conn;
+
+    if (strlen($_POST['password']) < 8)
+        throw new Exception('Password must be at least 8 characters long');
+    if ($_POST['password'] != $_POST['confirm-password'])
+        throw new Exception('Passwords do not match');
+    if (strlen($_POST['username']) < 3 || strlen($_POST['username']) > 20)
+        throw new Exception('Username must be between 3 and 20 characters long');
+    if (!isUserNameAvailable($_POST['username']))
+        throw new Exception('Username is not available');
+    $email = test_input($_POST['email']);
+    if (!isset($_POST['email']) || !filter_var($email, FILTER_VALIDATE_EMAIL))
+        throw new Exception('Invalid email');
+    if (!isEmailAvailable($email))
+        throw new Exception('Email is not available');
+
+    $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
+
     $sql = "INSERT INTO users (username, email, password) VALUES (?, ?, ?)";
     $stmt = $conn->prepare($sql);
-    if ($stmt->execute([$username, $email, $password])) {
-        header("Location: /twitter_clone/auth/login.php");
-    } else {
-        $err = 'Sign up failed';
-    }
+    if (!$stmt->execute([$_POST['username'], $email, $password]))
+        throw new Exception('Sign up failed');
+    header("Location: /twitter_clone/auth/login.php");
 }
-
 
 if (isset($_POST['submit'])) {
-    if ($_POST['password'] == $_POST['confirm-password']) {
-        if (strlen($_POST['password']) >= 8) {
-            if (strlen($_POST['username']) >= 3 && strlen($_POST['username']) <= 20) {
-                if (isUserNameAvailable($_POST['username'])) {
-                    $email = test_input($_POST['email']);
-                    if (isset($_POST['email']) && filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                        if (isEmailAvailable($email)) {
-                            $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
-                            signUp($_POST['username'], $email, $password);
-                        } else {
-                            $err = 'Email is not available';
-                        }
-                    } else {
-                        $err = "Invalid email";
-                    }
-                } else {
-                    $err = 'Username is not available';
-                }
-            } else {
-                $err = "Username is too short";
-            }
-        } else {
-            $err = "Password must be at least 8 characters";
-        }
-    } else {
-        $err = "Passwords don't match";
+    try {
+        sign_up();
+    } catch (Exception $e) {
+        $err = $e->getMessage();
     }
 }
-
-
 
 ?>
 

@@ -20,10 +20,9 @@ function isLogged()
     return true;
   }
   if (isset($_COOKIE['username'],  $_COOKIE['password'])) {
-
     $sql = "SELECT * FROM users WHERE username = ?";
     $stmt = $conn->prepare($sql);
-    if ($stmt->execute($_COOKIE['username'])) {
+    if ($stmt->execute([$_COOKIE['username']])) {
       $user = $stmt->fetch(PDO::FETCH_ASSOC);
       if (!password_verify($_COOKIE['password'], $user['password'])) {
         return false;
@@ -37,8 +36,10 @@ function isLogged()
   return false;
 }
 
-function getTweets($id = null, $user_tweets = false, $following_tweets = false)
+function getTweets($id = null, $user_tweets = false, $following_tweets = false, $page = 1)
 {
+  $per_page = 10;
+  $offset = ((int)$page - 1) * $per_page;
   global $conn;
   $sql = "SELECT tweets.*, users.profile_image, users.username, count(likes.tweet_id) as likes FROM tweets 
   JOIN users ON users.id = tweets.user_id
@@ -47,11 +48,14 @@ function getTweets($id = null, $user_tweets = false, $following_tweets = false)
 
   if ($following_tweets)
     $sql .= " AND users.id IN (SELECT following FROM follows WHERE follower = :user_id)";
-  $sql .= " GROUP BY tweets.id ORDER BY tweets.created_at DESC";
+  $sql .= " GROUP BY tweets.id ORDER BY tweets.created_at DESC LIMIT :per_page OFFSET :offset";
   $stmt = $conn->prepare($sql);
   if ($following_tweets)
     $stmt->bindParam(':user_id', $_SESSION['logged']['id']);
   $stmt->bindParam(':user', $id);
+  $stmt->bindParam(':per_page', $per_page, PDO::PARAM_INT);
+  $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
+
   if ($stmt->execute()) {
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
   } else {
