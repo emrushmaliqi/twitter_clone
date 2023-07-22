@@ -95,11 +95,13 @@ if (isset($_POST['submit'], $_POST['tweet'])) {
             <li class="page-item active" aria-current="page">
                 <span class="page-link"><?= isset($_GET['page']) ? $_GET['page'] : 1; ?></span>
             </li>
-            <li class="page-item" aria-current="page">
-                <a href="?page=<?= isset($_GET['page']) ? $_GET['page'] + 1 : 2; ?>" class="page-link"><?= isset($_GET['page']) ? $_GET['page'] + 1 : 2; ?></a>
-            </li>
+            <?php if (count($tweets) == 10) : ?>
+                <li class="page-item" aria-current="page">
+                    <a href="?page=<?= isset($_GET['page']) ? $_GET['page'] + 1 : 2; ?>" class="page-link"><?= isset($_GET['page']) ? $_GET['page'] + 1 : 2; ?></a>
+                </li>
+            <?php endif; ?>
             <li class="page-item">
-                <a class="page-link" href="?page=<?= isset($_GET['page']) ? $_GET['page'] + 1 : 2; ?>">Next</a>
+                <a class="page-link <?= count($tweets) == 10 ? "" : "disabled" ?>" href="?page=<?= isset($_GET['page']) ? $_GET['page'] + 1 : 2; ?>">Next</a>
             </li>
         </ul>
     </nav>

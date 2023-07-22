@@ -15,7 +15,7 @@ if (isset($_GET['q']) && !empty($_GET['q'])) {
     if (isset($_GET['category']) && $_GET['category'] == 'tweets') {
         $category = 'tweets';
     }
-    $sql = "SELECT users.*, count(tweets.id) as tweets_count FROM users
+    $sql = "SELECT users.*, count(tweets.user_id) as tweets_count FROM users
     LEFT JOIN tweets ON users.id = tweets.user_id
     WHERE users.username LIKE :q
     GROUP BY users.id";

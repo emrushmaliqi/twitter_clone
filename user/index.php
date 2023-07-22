@@ -15,6 +15,8 @@ $tweets = [];
 $followers = 0;
 $following = 0;
 
+$tweet_count = 0;
+
 if (isset($_GET['username'])) {
     $sql = "SELECT * FROM users WHERE username = ?";
     $stmt = $conn->prepare($sql);
@@ -31,6 +33,11 @@ if (isset($_GET['username'])) {
             $followersStmt = $conn->prepare($sql);
             $followersStmt->execute([$user['id']]);
             $followers = $followersStmt->fetchColumn();
+
+            $sql = "SELECT COUNT(*) FROM tweets WHERE user_id = ?";
+            $tweetStmt = $conn->prepare($sql);
+            $tweetStmt->execute([$user['id']]);
+            $tweet_count = $tweetStmt->fetchColumn();
         }
     }
 }
@@ -73,7 +80,7 @@ if (!$isLoggedUser && $user) {
                     <h4 class="mb-0"><?= $user['username'] ?></h4>
                 </div>
                 <div class="row align-items-center">
-                    <span class="col"><?= count($tweets) ?> Tweets</span>
+                    <span class="col"><?= $tweet_count ?> Tweets</span>
                     <span class="col" data-id="<?= $user['id'] ?>" <?= $followers > 0 ? 'onclick="showFollows(this)" role="button" data-follows-type="followers"' : "" ?>><span id="followersAmount"><?= $followers ?></span> Followers</span>
                     <span class="col" data-id="<?= $user['id'] ?>" <?= $following > 0 ? 'onclick="showFollows(this)" role="button" data-follows-type="followings"' : "" ?>><?= $following ?> Following</span>
                     <?php if ($isLoggedUser) : ?>
@@ -133,10 +140,10 @@ if (!$isLoggedUser && $user) {
                     <li class="page-item" aria-current="page">
                         <a href="?page=<?= isset($_GET['page']) ? $_GET['page'] + 1 : 2; ?>&username=<?= $_GET['username'] ?>" class="page-link"><?= isset($_GET['page']) ? $_GET['page'] + 1 : 2; ?></a>
                     </li>
-                    <li class="page-item">
-                        <a class="page-link" href="?page=<?= isset($_GET['page']) ? $_GET['page'] + 1 : 2; ?>&username=<?= $_GET['username'] ?>">Next</a>
-                    </li>
                 <?php endif; ?>
+                <li class="page-item">
+                    <a class="page-link <?= count($tweets) == 10 ? "" : "disabled" ?>" href="?page=<?= isset($_GET['page']) ? $_GET['page'] + 1 : 2; ?>&username=<?= $_GET['username'] ?>">Next</a>
+                </li>
             </ul>
         </nav>
     </div>
@@ -296,7 +303,7 @@ if (!$isLoggedUser && $user) {
                 followsModal.querySelector('.modal-title').innerText = `${type}`
                 followsModal.querySelector('.modal-body').innerHTML = data.map(user => `<div class="row align-items-center" id='follow-${user.id}' style='height: 50px;'>
                         <a class="col-2 p-0 mx-2 rounded-circle" style="height: 50px; width: 50px" href="index.php?username=${user.username}">
-                        <img src="../uploads/${user.profile_image}" class="img-fluid rounded-circle" />
+                        <img src="../uploads/${user.profile_image}" style="aspect-ratio: 1/1;" class="img-fluid rounded-circle" />
                         </a>
                         <p class="col-8 m-0"><a href="index.php?username=${user.username}" class="text-decoration-none text-black" >${user.username}</a></p>
                         ${res.is_logged ? `<button role='button' class='col-2 btn btn-secondary' onclick='removeFollow(this)' data-id='${user.id}' >Remove</button>` :
